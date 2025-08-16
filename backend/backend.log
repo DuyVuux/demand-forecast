@@ -1,0 +1,17 @@
+nohup: ignoring input
+/home/duykhongngu28/massive/DemandTTC_ver04/.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:373: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-08-15 15:54:50,771 | INFO | uvicorn.error | Started server process [61543]
+2025-08-15 15:54:50,771 | INFO | uvicorn.error | Started server process [61543]
+2025-08-15 15:54:50,772 | INFO | uvicorn.error | Waiting for application startup.
+2025-08-15 15:54:50,772 | INFO | uvicorn.error | Waiting for application startup.
+2025-08-15 15:54:50,773 | INFO | app | DB initialized
+2025-08-15 15:54:50,773 | INFO | uvicorn.error | Application startup complete.
+2025-08-15 15:54:50,773 | INFO | uvicorn.error | Application startup complete.
+2025-08-15 15:54:50,775 | ERROR | uvicorn.error | [Errno 98] error while attempting to bind on address ('0.0.0.0', 8010): address already in use
+2025-08-15 15:54:50,775 | ERROR | uvicorn.error | [Errno 98] error while attempting to bind on address ('0.0.0.0', 8010): address already in use
+2025-08-15 15:54:50,775 | INFO | uvicorn.error | Waiting for application shutdown.
+2025-08-15 15:54:50,775 | INFO | uvicorn.error | Waiting for application shutdown.
+2025-08-15 15:54:50,775 | INFO | uvicorn.error | Application shutdown complete.
+2025-08-15 15:54:50,775 | INFO | uvicorn.error | Application shutdown complete.

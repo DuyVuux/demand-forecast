@@ -1,0 +1,40 @@
+/* Topbar.module.css */
+.topbar {
+  height: 60px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 2rem;
+  border-bottom: 1px solid #e5e7eb; /* Light gray border */
+}
+
+.homeButton {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: 1.5rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.homeButton:hover {
+  background-color: #f3f4f6; /* Light gray hover */
+}
+
+.languageSwitcher button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  font-weight: 500;
+  color: #4b5563; /* Gray text */
+}
+
+.languageSwitcher button.active {
+  color: #001f3f; /* Navy for active language */
+  text-decoration: underline;
+}

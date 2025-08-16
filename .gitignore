@@ -1,0 +1,26 @@
+# Python venv
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Logs
+backend/logs/*.log
+
+# DB
+backend/data/app.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+
+# Data & Cache
+/data/
+backend/data/analysis/cache/
+backend/data/analysis/uploads/
+backend/data/raw_data/
+backend/data/model_result/

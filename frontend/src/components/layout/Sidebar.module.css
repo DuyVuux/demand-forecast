@@ -1,0 +1,61 @@
+/* Sidebar.module.css */
+.sidebar {
+  width: 250px;
+  background-color: #001f3f; /* Navy Blue */
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.logoContainer {
+  padding: 0 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.logo {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.navList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.navItem a {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  color: #d1d5db; /* Light gray for text */
+  text-decoration: none;
+  font-size: 1rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.navItem a:hover {
+  background-color: #003366; /* Darker Navy */
+  color: #ffffff;
+}
+
+.navItem a.active {
+  background-color: #004080; /* Highlight Navy */
+  color: #ffffff;
+  font-weight: 600;
+  border-left: 4px solid #60a5fa; /* Blue accent */
+  padding-left: calc(1.5rem - 4px);
+}
+
+.navIcon {
+  margin-right: 1rem;
+  font-size: 1.2rem;
+}

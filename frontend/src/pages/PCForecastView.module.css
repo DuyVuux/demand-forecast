@@ -1,0 +1,149 @@
+/* PCForecastView.module.css */
+
+.pageContainer {
+  padding: 2rem;
+  background-color: #f0f4f8;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.pageHeader {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a237e; /* Dark Navy Blue */
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #3949ab; /* Lighter Navy */
+}
+
+.formSection {
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #334155; /* Cool Gray */
+  margin-bottom: 0.5rem;
+}
+
+.input, .select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1; /* Light Gray */
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: #3949ab;
+  box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.2);
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #3949ab; /* Lighter Navy */
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  height: fit-content;
+  align-self: flex-end; /* Align with bottom of inputs */
+}
+
+.button:hover:not(:disabled) {
+  background-color: #1a237e; /* Darker Navy */
+}
+
+.button:disabled {
+  background-color: #9fa8da; /* Muted Navy */
+  cursor: not-allowed;
+}
+
+.error {
+  background-color: #ffcdd2; /* Light Red */
+  color: #c62828; /* Dark Red */
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.resultsSection {
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
+}
+
+.resultsSection h3 {
+  font-size: 1.5rem;
+  color: #1a237e;
+  margin-bottom: 1.5rem;
+}
+
+.safetyStockSection {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0; /* Very Light Gray */
+}
+
+.safetyStockSection h4 {
+  font-size: 1.25rem;
+  color: #3949ab;
+  margin-bottom: 1.5rem;
+}
+
+.resultsCard {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #e8eaf6; /* Lightest Navy */
+  border-left: 5px solid #3949ab;
+  border-radius: 6px;
+}
+
+.resultsCard h6 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a237e;
+  margin-bottom: 1rem;
+}
+
+.resultsCard p {
+  font-size: 1rem;
+  color: #334155;
+  margin: 0.5rem 0;
+}
+
+.resultsCard p strong {
+  color: #1a237e;
+}
+
+.highlightResult {
+  font-weight: 700 !important;
+  color: #2e7d32 !important; /* Success Green */
+  font-size: 1.2rem !important;
+  margin-top: 1rem !important;
+}

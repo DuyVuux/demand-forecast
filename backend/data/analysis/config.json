@@ -1,0 +1,17 @@
+{
+  "excluded_columns": [
+    "SKU",
+    "CUSTOMERCODE",
+    "ORDERKEY"
+  ],
+  "included_columns": [],
+  "identifier_patterns": [
+    "^id$",
+    ".*_id$",
+    "code",
+    "sku",
+    "orderkey"
+  ],
+  "unique_ratio_threshold": 0.9,
+  "last_updated": "2025-08-12T17:43:06.535907Z"
+}
