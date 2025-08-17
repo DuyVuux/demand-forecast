@@ -11,40 +11,20 @@ Web app đơn giản dự báo nhu cầu với 2 chức năng:
 - Database: SQLite (lưu dữ liệu mẫu khi upload)
 - Logging: `backend/logs/app.log`
 
-## Cấu trúc thư mục
+## Cấu trúc thư mục (chính)
 ```
 backend/
   app/
-    main.py
-    db.py
-    routers/forecast.py
-    services/forecast_service.py
-    utils/logger.py
-    models/schemas.py
   data/
-    product_sales_sample.csv
-    product_customer_sales_sample.csv
-  logs/
-    app.log
+    raw_data/raw_data.csv        # Dữ liệu bán hàng gốc
+    model_result/                # Kết quả dự báo đã được tính toán sẵn
   requirements.txt
 frontend/
-  index.html
-  vite.config.js
-  package.json
-  .env.development
-  public/
-    samples/
-      product_sales_sample.csv
-      product_customer_sales_sample.csv
   src/
-    main.jsx
-    App.jsx
-    api.js
-    styles.css
-    components/
-      ForecastForm.jsx
-      ForecastTable.jsx
-      ForecastChart.jsx
+  .env.development               # File cấu hình môi trường (cần tạo)
+  package.json
+.gitignore
+README.md
 ```
 
 ## Yêu cầu hệ thống
@@ -52,43 +32,53 @@ frontend/
 - Node.js 18+
 
 ## Thiết lập và chạy
-1) Tạo Python venv và cài backend deps (tại root repo):
+
+**Ghi chú quan trọng:** Dự án đã bao gồm sẵn dữ liệu (`backend/data/raw_data/raw_data.csv`) và kết quả dự báo (`backend/data/model_result/`). Bạn có thể xem kết quả ngay sau khi chạy ứng dụng mà không cần upload lại dữ liệu.
+
+### 1. Backend
+
+Từ thư mục gốc của dự án:
+
 ```bash
+# Tạo và kích hoạt môi trường ảo
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Cài đặt các thư viện cần thiết
 pip install -r backend/requirements.txt
-```
 
-2) Chạy backend (8008):
-```bash
-# Cách A: dùng uvicorn module
+# Chạy backend server trên cổng 8008
 .venv/bin/python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8008 --reload
-# Cách B: chạy file main (đường dẫn làm việc là root repo)
-.venv/bin/python backend/app/main.py
 ```
 
-3) Cài frontend và chạy dev server (3003):
+### 2. Frontend
+
+Mở một terminal khác, từ thư mục gốc của dự án:
+
 ```bash
+# Di chuyển vào thư mục frontend
 cd frontend
+
+# Tạo file môi trường cho frontend
+echo "VITE_API_BASE_URL=http://localhost:8008" > .env.development
+
+# Cài đặt các gói npm
 npm install
+
+# Khởi động dev server trên cổng 3003
 npm run dev
 ```
 
-4) Mở UI tại http://localhost:3003 và upload CSV mẫu trong `frontend/public/samples/` hoặc tạo file CSV của bạn.
+### 3. Truy cập ứng dụng
 
-## Định dạng CSV
-- Bài toán 1: `product_id,date,quantity_sold`
-- Bài toán 2: `product_id,customer_id,date,quantity_sold`
+Mở trình duyệt và truy cập vào `http://localhost:3003`.
 
-## API
-- `POST /forecast/product` (multipart form):
-  - file: CSV
-  - horizon: số ngày dự báo (mặc định 7)
-  - model: `arima` | `linreg` | `rf`
-- `POST /forecast/product_customer` (multipart form), tương tự.
+## Chức năng
 
-## Logging
-- Backend ghi log vào `backend/logs/app.log` với request, lỗi, và tiến trình dự báo.
+- **Xem kết quả có sẵn:** Ứng dụng sẽ tự động tải và hiển thị các kết quả dự báo đã được tính toán trước.
+- **Upload và dự báo mới:** Bạn có thể upload tệp CSV của riêng mình để thực hiện dự báo mới. Định dạng file phải tuân thủ:
+  - **Dự báo theo SKU:** `product_id,date,quantity_sold`
+  - **Dự báo theo SKU & Khách hàng:** `product_id,customer_id,date,quantity_sold`
 
 ## Ghi chú
-- Mô hình và pipeline được tối giản để demo. Có thể thay bằng mô hình phức tạp hơn (SARIMA, Prophet, XGBoost, LSTM, ...).
+- Các mô hình và pipeline được tối giản cho mục đích demo. Chúng có thể được mở rộng với các thuật toán phức tạp hơn như SARIMA, Prophet, XGBoost, LSTM, v.v.
