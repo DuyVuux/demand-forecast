@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import SkuForecastChart from '../components/SkuForecastChart.jsx';
-import styles from './SkuForecastPage.module.css';
+import {
+  Container, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel, CircularProgress, Alert, Card, CardContent, CardHeader, Box, Tooltip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+} from '@mui/material';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import SecurityIcon from '@mui/icons-material/Security';
 
 export default function SkuForecastPage() {
   const [productCode, setProductCode] = useState('');
@@ -102,91 +106,133 @@ export default function SkuForecastPage() {
   }
 
   return (
-    <div className={styles.pageContainer}>
-      <h1 className={styles.pageHeader}>Dự báo theo từng sản phẩm (SKU)</h1>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+        Dự báo theo từng sản phẩm (SKU)
+      </Typography>
 
-      <div className={styles.formSection}>
-        <div className={styles.formGrid}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Mã sản phẩm (SKU)</label>
-            <input
-              className={styles.input}
-              type="text"
+      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} sm={5}>
+            <TextField
+              fullWidth
+              label="Mã sản phẩm (SKU)"
               value={productCode}
               onChange={(e) => setProductCode(e.target.value)}
               placeholder="VD: 20100002"
+              variant="outlined"
             />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Mô hình</label>
-            <select className={styles.select} value={model} onChange={(e) => setModel(e.target.value)}>
-              {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          <div className={styles.formGroup}>
-            <button className={styles.button} onClick={handleForecast} disabled={!canQuery || loading}>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Mô hình</InputLabel>
+              <Select value={model} onChange={(e) => setModel(e.target.value)} label="Mô hình">
+                {modelOptions.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleForecast}
+              disabled={!canQuery || loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <QueryStatsIcon />}
+            >
               {loading ? 'Đang tải...' : 'Dự báo'}
-            </button>
-          </div>
-        </div>
-        {error && <div className={styles.error}>{error}</div>}
-      </div>
+            </Button>
+          </Grid>
+        </Grid>
+        {error && <Alert severity="error" sx={{ mt: 3 }}>{error}</Alert>}
+      </Paper>
 
-      {loading && <div className={styles.loadingMessage}>Đang tải kết quả...</div>}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ ml: 2 }}>Đang tải kết quả...</Typography>
+        </Box>
+      )}
 
       {forecastResult && (
-        <div className={styles.resultsSection}>
-          {/* Forecast Metrics */}
-          <div className={`${styles.card} ${styles.metricsCard}`}>
-            <h2>Kết quả dự báo</h2>
-            <p><strong>Mô hình:</strong> {forecastResult.model || 'N/A'}</p>
-            <p><strong>MAE:</strong> {forecastResult.metrics?.MAE?.toFixed(2) ?? 'N/A'}</p>
-            <p><strong>RMSE:</strong> {forecastResult.metrics?.RMSE?.toFixed(2) ?? 'N/A'}</p>
-            <p><strong>MAPE:</strong> {`${forecastResult.metrics?.MAPE?.toFixed(2) ?? 'N/A'}%`}</p>
-            <p className={styles.highlightResult}>
-              <strong>Tổng lượng hàng cần nhập:</strong> {forecastResult.forecast_quantity?.toLocaleString() ?? 'N/A'}
-            </p>
-          </div>
-
-          {/* Safety Stock Calculation */}
-          <div className={styles.card}>
-            <h2>Tính Tồn kho An toàn (Safety Stock)</h2>
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Mức độ dịch vụ</label>
-                <input className={styles.input} type="number" name="serviceLevel" value={ssParams.serviceLevel} onChange={handleSsParamChange} step="0.01" min="0.01" max="0.99" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Thời gian chờ (ngày)</label>
-                <input className={styles.input} type="number" name="leadTime" value={ssParams.leadTime} onChange={handleSsParamChange} min="0" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Độ lệch chuẩn LT</label>
-                <input className={styles.input} type="number" name="leadTimeStd" value={ssParams.leadTimeStd} onChange={handleSsParamChange} min="0" />
-              </div>
-              <div className={styles.formGroup}>
-                <button className={styles.button} onClick={handleCalculateSafetyStock} disabled={ssLoading}>
-                  {ssLoading ? 'Đang tính...' : 'Tính Safety Stock'}
-                </button>
-              </div>
-            </div>
-            {ssError && <div className={styles.error}>{ssError}</div>}
-            {safetyStock !== null && (
-              <div className={styles.safetyStockResultCard}>
-                <p>Tồn kho an toàn (Safety Stock): {safetyStock.toLocaleString()}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Chart */}
+        <Box>
+          {/* Chart Section */}
           {forecastResult.chart_data && (
-            <div className={styles.card}>
-              <h2>Biểu đồ dự báo</h2>
-              <SkuForecastChart record={forecastResult.chart_data} />
-            </div>
+            <Card elevation={3} sx={{ mb: 4 }}>
+              <CardHeader title="Biểu đồ dự báo" />
+              <CardContent>
+                <SkuForecastChart record={forecastResult.chart_data} />
+              </CardContent>
+            </Card>
           )}
-        </div>
+
+          {/* Results and Safety Stock Section */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={5} lg={4}>
+              <Card elevation={3} sx={{ height: '100%' }}>
+                <CardHeader
+                  title="Kết quả dự báo"
+                  avatar={<QueryStatsIcon />}
+                />
+                <CardContent>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableBody>
+                        <TableRow><TableCell>MAE</TableCell><TableCell align="right">{forecastResult.metrics?.MAE?.toFixed(2) ?? 'N/A'}</TableCell></TableRow>
+                        <TableRow><TableCell>RMSE</TableCell><TableCell align="right">{forecastResult.metrics?.RMSE?.toFixed(2) ?? 'N/A'}</TableCell></TableRow>
+                        <TableRow><TableCell>MAPE</TableCell><TableCell align="right">{`${forecastResult.metrics?.MAPE?.toFixed(2) ?? 'N/A'}%`}</TableCell></TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <Box sx={{ mt: 3, p: 2, borderRadius: 2, textAlign: 'center', background: (theme) => theme.palette.primary.main, color: 'white' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>Tổng lượng hàng cần nhập</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{forecastResult.forecast_quantity?.toLocaleString() ?? 'N/A'}</Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={7} lg={8}>
+              <Card elevation={3} sx={{ height: '100%' }}>
+                <CardHeader title="Tính Tồn kho An toàn (Safety Stock)" />
+                <CardContent>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Tooltip title="Xác suất đáp ứng nhu cầu khách hàng (0.01 - 0.99)">
+                        <TextField fullWidth label="Mức độ dịch vụ" type="number" name="serviceLevel" value={ssParams.serviceLevel} onChange={handleSsParamChange} InputProps={{ inputProps: { step: 0.01, min: 0.01, max: 0.99 } }} />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Tooltip title="Thời gian chờ hàng trung bình (ngày)">
+                        <TextField fullWidth label="Lead Time (ngày)" type="number" name="leadTime" value={ssParams.leadTime} onChange={handleSsParamChange} InputProps={{ inputProps: { min: 0 } }} />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Tooltip title="Độ lệch chuẩn của thời gian chờ">
+                        <TextField fullWidth label="Độ lệch chuẩn LT" type="number" name="leadTimeStd" value={ssParams.leadTimeStd} onChange={handleSsParamChange} InputProps={{ inputProps: { min: 0 } }} />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Button fullWidth variant="contained" color="secondary" onClick={handleCalculateSafetyStock} disabled={ssLoading} startIcon={ssLoading ? <CircularProgress size={20} /> : <SecurityIcon />}>
+                        {ssLoading ? 'Đang tính...' : 'Tính'}
+                      </Button>
+                    </Grid>
+                  </Grid>
+                  {ssError && <Alert severity="error" sx={{ mt: 2 }}>{ssError}</Alert>}
+                  {safetyStock !== null && (
+                    <Alert severity="success" sx={{ mt: 2 }}>
+                      <Typography sx={{ fontWeight: 'bold' }}>
+                        Tồn kho an toàn (Safety Stock): {safetyStock.toLocaleString()}
+                      </Typography>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
       )}
-    </div>
+    </Container>
   );
 }

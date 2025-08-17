@@ -9,7 +9,7 @@ __pycache__/
 backend/logs/*.log
 
 # DB
-backend/data/app.db
+# backend/data/app.db
 
 # Node
 frontend/node_modules/
@@ -19,8 +19,8 @@ frontend/dist/
 .DS_Store
 
 # Data & Cache
-/data/
+# /data/
 backend/data/analysis/cache/
 backend/data/analysis/uploads/
-backend/data/raw_data/
-backend/data/model_result/
+# backend/data/raw_data/
+# backend/data/model_result/

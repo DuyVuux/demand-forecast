@@ -136,6 +136,26 @@ async def column(name: str, job_id: str = Query(...), page: int = Query(1, ge=1)
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.get("/columns/{name}/export")
+async def export_column_csv(name: str, job_id: str = Query(...)):
+    import io
+    from ..services.analysis_service import export_column_detail_csv
+
+    st = job_status(job_id)
+    if st.get("status") != "finished":
+        return JSONResponse(status_code=202, content={"detail": "processing", "status": st.get("status"), "job": st})
+    
+    try:
+        csv_buffer = export_column_detail_csv(job_id, name)
+        headers = {"Content-Disposition": f"attachment; filename=details_{name}_{job_id}.csv"}
+        return StreamingResponse(csv_buffer, media_type="text/csv", headers=headers)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        log.exception(f"Failed to export column {name} for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Could not export data: {e}")
+
+
 @router.get("/result")
 async def full_result(job_id: str = Query(...)):
     st = job_status(job_id)

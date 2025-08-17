@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import api from '../api';
 import PCForecastChart from '../components/PCForecastChart.jsx';
-import styles from './PCForecastView.module.css';
+import {
+  Container, Typography, Paper, Grid, TextField, Button, Select, MenuItem, FormControl, InputLabel, CircularProgress, Alert, Card, CardContent, CardHeader, Box, Tooltip
+} from '@mui/material';
+import ScienceIcon from '@mui/icons-material/Science';
+import SecurityIcon from '@mui/icons-material/Security';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 export default function PCForecastView() {
   // State for forecast selection
@@ -102,75 +107,128 @@ export default function PCForecastView() {
   }, [record, safetyStockResult]);
 
   return (
-    <div className={styles.pageContainer}>
-      <h1 className={styles.pageHeader}>Dự báo theo Nhóm sản phẩm (SP-KH)</h1>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+        Dự báo theo Nhóm sản phẩm (SP-KH)
+      </Typography>
 
-      <div className={styles.formSection}>
-        <div className={styles.formGrid}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Mã khách hàng (CustomerCode)</label>
-            <input className={styles.input} value={customerCode} onChange={(e) => setCustomerCode(e.target.value)} placeholder="Nhập mã khách hàng..." />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Mã sản phẩm (ProductCode)</label>
-            <input className={styles.input} value={productCode} onChange={(e) => setProductCode(e.target.value)} placeholder="Nhập mã sản phẩm..." />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Mô hình dự báo</label>
-            <select className={styles.select} value={model} onChange={(e) => setModel(e.target.value)}>
-              {modelOptions.map((m) => (<option key={m} value={m}>{m}</option>))}
-            </select>
-          </div>
-          <div className={styles.formGroup}>
-             <button className={styles.button} onClick={handleForecast} disabled={loading}>
+      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+        <Grid container spacing={3} alignItems="flex-end">
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Mã khách hàng (CustomerCode)"
+              value={customerCode}
+              onChange={(e) => setCustomerCode(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Mã sản phẩm (ProductCode)"
+              value={productCode}
+              onChange={(e) => setProductCode(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Mô hình dự báo</InputLabel>
+              <Select value={model} onChange={(e) => setModel(e.target.value)} label="Mô hình dự báo">
+                {modelOptions.map((m) => (<MenuItem key={m} value={m}>{m}</MenuItem>))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleForecast}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ScienceIcon />}
+            >
               {loading ? 'Đang xử lý...' : 'Dự báo'}
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
-      {error && <div className={styles.error}>{error}</div>}
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {chartRecord && (
-        <div className={styles.resultsSection}>
-          <h3>Biểu đồ dự báo: {chartRecord.product_code} | {chartRecord.customer_code}</h3>
-          <PCForecastChart record={chartRecord} />
+      {record && (
+        <Box>
+          {/* Chart Section */}
+          <Card elevation={3} sx={{ mb: 3 }}>
+            <CardHeader
+              title={`Biểu đồ dự báo: ${record.product_code} | ${record.customer_code}`}
+              subheader={`Mô hình: ${record.model}`}
+            />
+            <CardContent>
+              <PCForecastChart record={chartRecord} />
+            </CardContent>
+          </Card>
 
-          <div className={styles.safetyStockSection}>
-            <h4>Tính toán Tồn kho An toàn (Safety Stock)</h4>
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Mức độ phục vụ (Service Level)</label>
-                <input className={styles.input} type="number" step="0.01" min="0.01" max="0.99" value={serviceLevel} onChange={(e) => setServiceLevel(parseFloat(e.target.value))} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Thời gian chờ (Lead Time - ngày)</label>
-                <input className={styles.input} type="number" min="1" value={leadTime} onChange={(e) => setLeadTime(parseInt(e.target.value, 10))} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Độ lệch chuẩn Lead Time (ngày)</label>
-                <input className={styles.input} type="number" min="0" value={leadTimeStd} onChange={(e) => setLeadTimeStd(parseFloat(e.target.value))} />
-              </div>
-              <div className={styles.formGroup}>
-                <button className={styles.button} onClick={handleCalculateSafetyStock} disabled={isCalculating || !record}>
-                  {isCalculating ? 'Đang tính...' : 'Tính Tồn kho'}
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Results and Safety Stock Section */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={5} lg={4}>
+              <Card elevation={3} sx={{ height: '100%' }}>
+                <CardHeader title="Kết quả dự báo" />
+                <CardContent>
+                  <Typography variant="body1" gutterBottom><strong>MAE:</strong> {record.metrics?.MAE?.toLocaleString()}</Typography>
+                  <Typography variant="body1" gutterBottom><strong>RMSE:</strong> {record.metrics?.RMSE?.toLocaleString()}</Typography>
+                  <Typography variant="body1" gutterBottom><strong>MAPE:</strong> {record.metrics?.MAPE ? `${(record.metrics.MAPE * 100).toFixed(2)}%` : 'N/A'}</Typography>
+                  <hr />
+                  <Typography variant="h6" sx={{ mt: 2 }}><strong>Tổng lượng cần nhập:</strong></Typography>
+                  <Typography variant="h5" color="primary">{record.total_qty?.toLocaleString()}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-          {safetyStockResult && (
-            <div className={styles.resultsCard}>
-              <h6>Kết quả tính toán</h6>
-              <p><strong>Demand Mean (Lịch sử):</strong> {safetyStockResult.demandMean.toLocaleString()}</p>
-              <p><strong>Demand Std Dev (Lịch sử):</strong> {safetyStockResult.demandStd.toLocaleString()}</p>
-              <p className={styles.highlightResult}>
-                <strong>Tồn kho an toàn (Safety Stock):</strong> {Math.round(safetyStockResult.safetyStock).toLocaleString()}
-              </p>
-            </div>
-          )}
-        </div>
+            <Grid item xs={12} md={7} lg={8}>
+              <Card elevation={3} sx={{ height: '100%' }}>
+                <CardHeader title="Tính toán Tồn kho An toàn (Safety Stock)" />
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Tooltip title="Tỷ lệ đáp ứng đơn hàng mong muốn, ví dụ: 0.95 tương đương 95%.">
+                        <TextField fullWidth label="Mức độ phục vụ (Service Level)" type="number" value={serviceLevel} onChange={(e) => setServiceLevel(parseFloat(e.target.value))} InputProps={{ inputProps: { min: 0.01, max: 0.99, step: 0.01 } }} variant="outlined" />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Tooltip title="Thời gian trung bình (tính bằng ngày) kể từ khi đặt hàng cho đến khi nhận được hàng.">
+                        <TextField fullWidth label="Thời gian chờ (Lead Time)" type="number" value={leadTime} onChange={(e) => setLeadTime(parseInt(e.target.value, 10))} InputProps={{ inputProps: { min: 1 } }} variant="outlined" />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Tooltip title="Độ lệch chuẩn của thời gian chờ, phản ánh sự biến động của chuỗi cung ứng.">
+                        <TextField fullWidth label="Độ lệch chuẩn Lead Time" type="number" value={leadTimeStd} onChange={(e) => setLeadTimeStd(parseFloat(e.target.value))} InputProps={{ inputProps: { min: 0 } }} variant="outlined" />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Button fullWidth variant="contained" color="secondary" size="large" onClick={handleCalculateSafetyStock} disabled={isCalculating || !record} startIcon={isCalculating ? <CircularProgress size={20} color="inherit" /> : <SecurityIcon />}>
+                        {isCalculating ? 'Đang tính...' : 'Tính Tồn kho'}
+                      </Button>
+                    </Grid>
+                  </Grid>
+                  {safetyStockResult && (
+                    <Box sx={{ mt: 3, p: 2.5, borderRadius: 2, textAlign: 'center', background: (theme) => theme.palette.primary.main, color: 'white' }}>
+                      <Typography variant="h6" component="p" sx={{ fontWeight: 'medium' }}>
+                        Tồn kho an toàn (Safety Stock)
+                      </Typography>
+                      <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', mt: 1 }}>
+                        {Math.round(safetyStockResult.safetyStock).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
       )}
-    </div>
+    </Container>
   );
 }

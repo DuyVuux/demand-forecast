@@ -139,7 +139,7 @@ def get_pc_forecast(
 
     if not result_record:
         log.warning(f"No data found for C={customer_code}, P={product_code}, M={model}")
-        return {"count": 0, "data": None}
+        raise HTTPException(status_code=404, detail=f"No forecast data available for C='{customer_code}', P='{product_code}' with model '{model}'.")
 
     # Trim the forecast to the requested number of weeks
     forecast_days = forecast_weeks * 7
@@ -148,12 +148,15 @@ def get_pc_forecast(
         sorted_forecast = sorted(result_record['forecast'], key=lambda x: x.get('date', ''))
         result_record['forecast'] = sorted_forecast[:forecast_days]
 
+    # Calculate total forecast quantity
+    total_qty = sum(item.get('yhat', 0) for item in result_record.get('forecast', []))
+    result_record['total_qty'] = total_qty
+
     dur = (perf_counter() - t0) * 1000
     log.info(
         f"GET /pc-forecast returned 1 record for C={customer_code}, P={product_code}, M={model} in {dur:.1f} ms"
     )
-
-    return {"count": 1, "data": result_record}
+    return {"data": result_record}
 
 
 @router.get("/pc-forecast/models")
@@ -353,4 +356,3 @@ def get_safety_stock(request: SafetyStockRequest = Body(...)):
 
     log.info(f"Tồn kho an toàn cho {request.product_code}: {safety_stock}")
     return response
-

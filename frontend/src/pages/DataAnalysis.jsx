@@ -1,107 +1,227 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from '../api';
-import { Bar, Line } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, LineElement, BarElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, TimeScale } from 'chart.js';
-import styles from './DataAnalysis.module.css';
+import {
+  Container, Typography, Button, Box, Paper, Grid, CircularProgress, Alert, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Tooltip as MuiTooltip, FormControl, Select, MenuItem, Chip
+} from '@mui/material';
+import { UploadFile as UploadFileIcon, CloudUpload as CloudUploadIcon, Download as DownloadIcon } from '@mui/icons-material';
 
 ChartJS.register(LineElement, BarElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, TimeScale);
 
 const POLLING_INTERVAL = 5000;
-
 const MemoizedBar = React.memo(Bar);
 
 // --- Child Components for DataAnalysis Page ---
 
 const UploadSection = ({ onUpload, onFileChange, file, status, dragging, dragHandlers }) => (
-  <div className={styles.uploadContainer} {...dragHandlers}>
-    <input type="file" id="file-upload" className={styles.fileInput} onChange={onFileChange} accept=".csv,.xlsx" />
-    <label htmlFor="file-upload" className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}>
-      <div className={styles.uploadIcon}>📤</div>
-      <p className={styles.uploadText}>
-        Kéo và thả tệp vào đây, hoặc <span>chọn một tệp</span>
-      </p>
-    </label>
-    {file && <p className={styles.filePreview}>Tệp đã chọn: {file.name}</p>}
-    <button onClick={onUpload} disabled={!file || status === 'uploading' || status === 'processing'} className={styles.uploadButton}>
-      {status === 'uploading' ? 'Đang tải lên...' : 'Tải lên & Phân tích'}
-    </button>
-  </div>
+  <Paper
+    variant="outlined"
+    {...dragHandlers}
+    sx={{
+      p: 4, 
+      textAlign: 'center', 
+      borderStyle: 'dashed',
+      borderColor: dragging ? 'primary.main' : 'divider',
+      backgroundColor: dragging ? 'action.hover' : 'background.paper',
+      transition: 'all 0.2s ease-in-out',
+      mb: 2
+    }}
+  >
+    <input type="file" id="file-upload" onChange={onFileChange} accept=".csv,.xlsx" style={{ display: 'none' }} />
+    <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+    <Typography variant="h6" gutterBottom>
+      Kéo và thả tệp vào đây, hoặc
+    </Typography>
+    <Button variant="contained" component="label" htmlFor="file-upload" sx={{ mb: 2 }}>
+      Chọn một tệp
+    </Button>
+    {file && <Typography variant="body2" color="text.secondary">Tệp đã chọn: {file.name}</Typography>}
+    <Box sx={{ mt: 2 }}>
+      <Button 
+        onClick={onUpload} 
+        disabled={!file || status === 'uploading' || status === 'processing'}
+        variant="contained"
+        size="large"
+        startIcon={status === 'uploading' ? <CircularProgress size={20} color="inherit" /> : <UploadFileIcon />}
+      >
+        {status === 'uploading' ? 'Đang tải lên...' : 'Tải lên & Phân tích'}
+      </Button>
+    </Box>
+  </Paper>
 );
 
 const JobStatus = ({ status, error }) => {
   if (error) {
-    return <div className={styles.errorContainer}>Lỗi: {error}</div>;
+    return <Alert severity="error" sx={{ mb: 2 }}>Lỗi: {error}</Alert>;
   }
-  if (status && status !== 'finished' && status !== 'failed') {
+  if (status && status !== 'finished' && status !== 'failed' && status !== 'uploading' && status !== 'submitted') {
     return (
-      <div className={styles.statusContainer}>
-        Trạng thái: <strong>{status}</strong>
-        {status === 'processing' && <span className={styles.spinner}></span>}
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Chip label={`Trạng thái: ${status}`} color="info" />
+        {status === 'processing' && <CircularProgress size={24} />}
+      </Box>
     );
   }
   return null;
 };
 
-const SummaryCard = ({ overview, filters, onFilterChange, chartData }) => (
-  <div className={styles.card}>
-    <h2 className={styles.cardHeader}>Tổng quan Dữ liệu</h2>
-    <p>{overview.summary}</p>
-    <div className={styles.tableContainer}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Tên cột</th>
-            <th>Kiểu dữ liệu</th>
-            <th>% Thiếu</th>
-            <th>Bao gồm</th>
-          </tr>
-        </thead>
-        <tbody>
-          {overview.columns.map(col => (
-            <tr key={col.name}>
-              <td>{col.name}</td>
-              <td>{col.type}</td>
-              <td>{col.missing_percentage.toFixed(2)}%</td>
-              <td title={filters?.excluded_by_pattern[col.name] || ''}>
-                <input 
-                  type="checkbox" 
-                  checked={filters ? filters.included_columns.includes(col.name) : false}
-                  onChange={(e) => onFilterChange(col.name, e.target.checked)}
-                  disabled={!!filters?.excluded_by_pattern[col.name]}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    {chartData && <div className={styles.chartContainer}><MemoizedBar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>}
-  </div>
-);
+const SummaryCard = ({ overview, filters, onFilterChange }) => {
+  if (!overview || !filters) {
+    return null;
+  }
 
-const ColumnDetailCard = ({ overview, colName, setColName, colDetail, histChart, barChart }) => (
-  <div className={styles.card}>
-    <h2 className={styles.cardHeader}>Chi tiết Cột</h2>
-    <select className={styles.select} value={colName} onChange={e => setColName(e.target.value)}>
-      {overview.columns.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-    </select>
-    {colDetail ? (
-      <div>
-        <h4>{colDetail.name} ({colDetail.type})</h4>
-        {colDetail.warning && <p className={styles.warning}>{colDetail.warning}</p>}
-        {colDetail.stats && (
-          <div className={styles.statsGrid}>
-            {Object.entries(colDetail.stats).map(([key, value]) => (
-              <div key={key}><strong>{key}:</strong> {typeof value === 'number' ? value.toFixed(2) : value}</div>
-            ))}
-          </div>
-        )}
-        {histChart && <div className={styles.chartContainer}><MemoizedBar data={histChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} /></div>}
-        {barChart && <div className={styles.chartContainer}><MemoizedBar data={barChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} /></div>}
-      </div>
-    ) : <p>Đang tải...</p>}
-  </div>
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h5" component="h2" gutterBottom>Tổng quan Dữ liệu</Typography>
+        <Typography variant="body1" color="text.secondary" paragraph>{overview.summary}</Typography>
+        <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, maxHeight: 500 }}>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Tên Cột</TableCell>
+                <TableCell>Kiểu dữ liệu</TableCell>
+                <TableCell>Số lượng duy nhất</TableCell>
+                <TableCell>Số lượng null</TableCell>
+                <TableCell>Min</TableCell>
+                <TableCell>Max</TableCell>
+                <TableCell>Mean</TableCell>
+                <TableCell>Median</TableCell>
+                
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {overview.columns.map(col => {
+                const exclusionReason = filters?.auto_excluded?.[col.name];
+                const isIncluded = !(col.name in (filters?.auto_excluded || {})) && !filters?.user_excluded?.includes(col.name);
+
+                return (
+                  <TableRow key={col.name}>
+                    <TableCell>
+                      <MuiTooltip title={exclusionReason ? `Tự động loại trừ: ${exclusionReason}` : 'Bao gồm trong phân tích'}>
+                        <span>{col.name}</span>
+                      </MuiTooltip>
+                    </TableCell>
+                    <TableCell>{col.dtype}</TableCell>
+                    <TableCell>{col.unique_count}</TableCell>
+                    <TableCell>{col.missing_count ?? 0}</TableCell>
+                    <TableCell>{col.name === 'Quantity' ? col.min ?? 'N/A' : '-'}</TableCell>
+                    <TableCell>{col.name === 'Quantity' ? col.max ?? 'N/A' : '-'}</TableCell>
+                    <TableCell>{col.name === 'Quantity' ? col.mean ?? 'N/A' : '-'}</TableCell>
+                    <TableCell>{col.name === 'Quantity' ? col.median ?? 'N/A' : '-'}</TableCell>
+                    
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ColumnDetailCard = ({ overview, colName, setColName, colDetail, histChart, barChart, jobId }) => (
+  <Card>
+    <CardContent>
+      <Typography variant="h5" component="h2" gutterBottom>Chi tiết Cột</Typography>
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <Select value={colName} onChange={e => setColName(e.target.value)} size="small">
+          {overview.columns.map(c => <MenuItem key={c.name} value={c.name}>{c.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+      {colDetail ? (
+        <Box>
+          <Typography variant="h6">{colDetail.name} ({colDetail.type})</Typography>
+          {colDetail.warning && <Alert severity="warning" sx={{ my: 1 }}>{colDetail.warning}</Alert>}
+          {colDetail.stats && (
+            <Grid container spacing={1} sx={{ my: 2 }}>
+              {Object.entries(colDetail.stats).map(([key, value]) => (
+                <Grid item xs={6} sm={4} key={key}>
+                  <Paper variant="outlined" sx={{ p: 1 }}>
+                    <Typography variant="caption" color="text.secondary">{key}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{typeof value === 'number' ? value.toFixed(2) : value}</Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+          {colDetail.is_high_cardinality ? (
+            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: 1, textAlign: 'center' }}>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {colDetail.warning}
+              </Typography>
+              <Button 
+                variant="contained"
+                startIcon={<DownloadIcon />}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/analysis/columns/${colName}/export?job_id=${jobId}`);
+                    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    const disposition = res.headers.get('content-disposition');
+                    let filename = `details_${colName}.csv`;
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) { 
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+                    a.setAttribute('download', filename);
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } catch (err) {
+                    console.error("Download failed", err);
+                    // You might want to show an error to the user here
+                  }
+                }}
+              >
+                Tải về CSV
+              </Button>
+            </Box>
+          ) : (
+            <>
+              {histChart && <Box sx={{ height: 250, mb: 2 }}><MemoizedBar data={histChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} /></Box>}
+              {barChart && <Box sx={{ height: 250 }}><MemoizedBar data={barChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} /></Box>}
+              {colDetail && colDetail.value_counts && Object.keys(colDetail.value_counts).length > 0 && (
+                <Box sx={{ maxWidth: 400, mt: 2 }}>
+                  <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
+                    <Table stickyHeader size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Thành phần</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>Số lượng</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.entries(colDetail.value_counts)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 50) // Giới hạn chỉ hiển thị 50 giá trị đầu
+                          .map(([value, count]) => (
+                            <TableRow key={value} hover>
+                              <TableCell>{value}</TableCell>
+                              <TableCell align="right">{count.toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
+      ) : <CircularProgress />}
+    </CardContent>
+  </Card>
 );
 
 // --- Main DataAnalysis Component ---
@@ -122,7 +242,7 @@ export default function DataAnalysis() {
         if (jobId && (status === 'submitted' || status === 'processing')) {
             const interval = setInterval(async () => {
                 try {
-                    const response = await api.get(`/analysis/status?job_id=${jobId}`);
+                    const response = await api.get(`/analysis/status/${jobId}`);
                     const newStatus = response.data.status;
                     setStatus(newStatus);
                     if (newStatus === 'finished') {
@@ -152,7 +272,7 @@ export default function DataAnalysis() {
             const fetchDetails = async () => {
                 try {
                     setColDetail(null);
-                    const response = await api.get(`/analysis/column_detail?job_id=${jobId}&column_name=${colName}`);
+                    const response = await api.get(`/analysis/columns/${colName}?job_id=${jobId}`);
                     setColDetail(response.data);
                 } catch (err) {
                     console.error('Lỗi khi lấy chi tiết cột:', err);
@@ -166,9 +286,15 @@ export default function DataAnalysis() {
     const fetchConfig = async (id) => {
         try {
             const res = await api.get(`/analysis/config?job_id=${id}`);
-            setFilters(res.data);
+            if (res.data && res.data.filters) {
+                setFilters(res.data.filters);
+            } else {
+                // Fallback to a safe default if the structure is not as expected
+                setFilters({ included_columns: [], excluded_by_pattern: {} });
+            }
         } catch (error) {
             console.error("Failed to fetch filters", error);
+            setFilters({ included_columns: [], excluded_by_pattern: {} }); // Also set safe default on error
         }
     };
 
@@ -180,7 +306,8 @@ export default function DataAnalysis() {
 
         try {
             await api.post(`/analysis/config?job_id=${jobId}`, { included_columns: newIncluded });
-            setFilters(prev => ({ ...prev, included_columns: newIncluded }));
+            // Refetch the config to get the updated state including any server-side changes
+            await fetchConfig(jobId);
             const overviewRes = await api.get(`/analysis/summary?job_id=${jobId}`);
             setOverview(overviewRes.data);
         } catch (error) {
@@ -200,16 +327,15 @@ export default function DataAnalysis() {
             setJobId(response.data.job_id);
             setStatus('submitted');
         } catch (err) {
-            setStatus('failed');
             setError(err.response?.data?.detail || 'Tải lên thất bại.');
+            setStatus('failed');
             console.error(err);
         }
     };
 
     const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-        }
+        setFile(e.target.files[0]);
+        resetState();
     };
 
     const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); };
@@ -217,13 +343,17 @@ export default function DataAnalysis() {
         e.preventDefault();
         e.stopPropagation();
         dragCounter.current++;
-        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) setDragging(true);
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setDragging(true);
+        }
     };
     const handleDragOut = (e) => {
         e.preventDefault();
         e.stopPropagation();
         dragCounter.current--;
-        if (dragCounter.current === 0) setDragging(false);
+        if (dragCounter.current === 0) {
+            setDragging(false);
+        }
     };
     const handleDrop = (e) => {
         e.preventDefault();
@@ -231,68 +361,110 @@ export default function DataAnalysis() {
         setDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             setFile(e.dataTransfer.files[0]);
+            resetState();
             e.dataTransfer.clearData();
             dragCounter.current = 0;
         }
     };
 
-    const dragHandlers = { onDragEnter: handleDragIn, onDragLeave: handleDragOut, onDragOver: handleDrag, onDrop: handleDrop };
+    const resetState = () => {
+        setJobId(null);
+        setStatus('');
+        setOverview(null);
+        setColName('');
+        setColDetail(null);
+        setError('');
+    };
 
-    const summaryChart = useMemo(() => {
+    const chartData = useMemo(() => {
         if (!overview) return null;
-        return { labels: overview.columns.map(c => c.name), datasets: [{ label: '% giá trị thiếu', data: overview.columns.map(c => c.missing_percentage), backgroundColor: 'rgba(75, 192, 192, 0.6)' }] };
+        return {
+            labels: overview.columns.map(c => c.name),
+            datasets: [{
+                label: '% Missing',
+                data: overview.columns.map(c => c.missing_percentage),
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            }]
+        };
     }, [overview]);
 
     const histChart = useMemo(() => {
-        if (!colDetail || !colDetail.histogram) return null;
-        const { counts, bin_edges } = colDetail.histogram;
-        if (!Array.isArray(bin_edges)) return null;
-        const labels = bin_edges.slice(0, -1).map((edge, i) => `${edge.toFixed(1)}-${bin_edges[i+1].toFixed(1)}`);
-        return { labels, datasets: [{ data: counts || [], backgroundColor: 'rgba(54, 162, 235, 0.6)' }] };
+        if (!colDetail?.histogram) return null;
+        return {
+            labels: colDetail.histogram.bins.map(b => b.toFixed(2)),
+            datasets: [{
+                label: 'Frequency',
+                data: colDetail.histogram.counts,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            }]
+        };
     }, [colDetail]);
 
     const barChart = useMemo(() => {
-        if (!colDetail || !colDetail.value_counts) return null;
-        const labels = Object.keys(colDetail.value_counts);
-        const data = Object.values(colDetail.value_counts);
-        return { labels, datasets: [{ data, backgroundColor: 'rgba(255, 159, 64, 0.6)' }] };
+        if (!colDetail?.value_counts || typeof colDetail.value_counts !== 'object') return null;
+
+        let entries = Object.entries(colDetail.value_counts);
+        if (entries.length === 0) return null;
+
+        // Optimization: If there are too many unique values, sorting the whole array is slow and can crash the browser.
+        // We'll take a large slice, sort that, and then take the top N.
+        // This is a heuristic and might not get the true top 20 if the highest counts are outside the initial slice,
+        // but it prevents the app from crashing.
+        // A better long-term solution is to have the backend return only the top N value counts for high-cardinality columns.
+        if (entries.length > 50000) {
+            entries = entries.slice(0, 50000);
+        }
+
+        // Sort by count descending and take top 20 for display
+        const sortedEntries = entries.sort(([, a], [, b]) => b - a).slice(0, 20);
+
+        return {
+            labels: sortedEntries.map(([value]) => String(value)), // Ensure labels are strings
+            datasets: [{
+                label: 'Count',
+                data: sortedEntries.map(([, count]) => count),
+                backgroundColor: 'rgba(153, 102, 255, 0.5)',
+            }]
+        };
     }, [colDetail]);
 
     return (
-        <div>
-            <div className={styles.pageHeader}><h1>Phân tích Dữ liệu</h1></div>
-            
-            {!jobId && !overview && (
-                <UploadSection 
-                    onUpload={handleUpload} 
-                    onFileChange={handleFileChange} 
-                    file={file} 
-                    status={status} 
-                    dragging={dragging} 
-                    dragHandlers={dragHandlers} 
-                />
-            )}
-
+        <Container maxWidth="xl">
+            <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 2 }}>
+                Phân tích Dữ liệu
+            </Typography>
+            <UploadSection 
+                onUpload={handleUpload} 
+                onFileChange={handleFileChange} 
+                file={file} 
+                status={status} 
+                dragging={dragging}
+                dragHandlers={{ onDragEnter: handleDragIn, onDragLeave: handleDragOut, onDragOver: handleDrag, onDrop: handleDrop }}
+            />
             <JobStatus status={status} error={error} />
-
             {overview && (
-                <div className={styles.resultsGrid}>
-                    <SummaryCard 
-                        overview={overview} 
-                        filters={filters} 
-                        onFilterChange={handleFilterChange} 
-                        chartData={summaryChart} 
-                    />
-                    <ColumnDetailCard 
-                        overview={overview} 
-                        colName={colName} 
-                        setColName={setColName} 
-                        colDetail={colDetail} 
-                        histChart={histChart} 
-                        barChart={barChart} 
-                    />
-                </div>
+                <Box>
+                    <Box sx={{ mb: 3 }}>
+                        <SummaryCard 
+                            overview={overview} 
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            chartData={chartData} 
+                        />
+                    </Box>
+                    <Box>
+                        <ColumnDetailCard 
+                            overview={overview} 
+                            colName={colName} 
+                            setColName={setColName} 
+                            colDetail={colDetail} 
+                            histChart={histChart}
+                            barChart={barChart}
+                            jobId={jobId}
+                        />
+                    </Box>
+                </Box>
             )}
-        </div>
+        </Container>
     );
 }

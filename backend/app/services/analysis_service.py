@@ -376,9 +376,62 @@ def compute_correlation(df: pd.DataFrame) -> Optional[Dict[str, Any]]:
 def analyze_dataset(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     df = _load_df_from_bytes(file_bytes, filename)
     file_hash = _md5_bytes(file_bytes)
-    
+
     # --- Run full analysis pipeline ---
-    overview = compute_overview(df, file_hash)
+    # This function will now compute the overview directly
+    logger.info("Computing overview for file_hash=%s", file_hash)
+    num_rows, num_cols = df.shape
+
+    cols_data = []
+    for col in df.columns:
+        s = df[col]
+        null_count = s.isnull().sum()
+        unique_count = s.nunique()
+        col_data = {
+            "name": col,
+            "dtype": str(s.dtype),
+            "missing_count": int(null_count),
+            "unique_count": int(unique_count),
+            "min": None,
+            "max": None,
+            "mean": None,
+            "median": None,
+        }
+
+        if is_numeric_dtype(s):
+            desc = s.describe()
+            col_data.update({
+                "min": desc.get("min"),
+                "max": desc.get("max"),
+                "mean": desc.get("mean"),
+                "median": desc.get("50%"),
+            })
+        elif is_datetime64_any_dtype(s):
+            desc = s.describe(datetime_is_numeric=True)
+            col_data.update({
+                "min": desc.get("min"),
+                "max": desc.get("max"),
+            })
+
+        # Format numeric values for better readability
+        for key in ["min", "max", "mean", "median"]:
+            if col_data[key] is not None and pd.notna(col_data[key]):
+                if isinstance(col_data[key], (int, float)):
+                    col_data[key] = f"{col_data[key]:,.2f}"
+                elif isinstance(col_data[key], (datetime, pd.Timestamp)):
+                    col_data[key] = col_data[key].strftime('%Y-%m-%d')
+
+        cols_data.append(col_data)
+
+    overview = {
+        "summary": (
+            f"Dataset has {num_rows} rows, {num_cols} columns. "
+            f"Total missing values: {int(df.isnull().sum().sum())}. "
+            f"Duplicate rows: {int(df.duplicated().sum())}."
+        ),
+        "columns": cols_data,
+    }
+    
     quality = compute_quality(df)
     insights = compute_insights(df)
     correlation = compute_correlation(df)
@@ -387,59 +440,10 @@ def analyze_dataset(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         "version": PIPELINE_VERSION,
         "filename": filename,
         "ran_at": datetime.now(timezone.utc).isoformat(),
-        "overview": overview, # Renamed from summary for clarity
+        "overview": overview,
         "quality": quality,
         "insights": insights,
         "correlation": correlation,
-    }
-
-def compute_overview(df: pd.DataFrame, file_hash: str) -> Dict[str, Any]:
-    columns_data = []
-    for col in df.columns:
-        s = df[col]
-        col_data = {
-            "name": col,
-            "dtype": str(s.dtype),
-            "null_count": int(s.isnull().sum()),
-            "unique_count": int(s.nunique()),
-            "min": None,
-            "max": None,
-            "mean": None,
-            "median": None,
-        }
-
-        if is_numeric_dtype(s):
-            stats = s.describe()
-            col_data.update({
-                "min": float(stats.get("min")) if pd.notna(stats.get("min")) else None,
-                "max": float(stats.get("max")) if pd.notna(stats.get("max")) else None,
-                "mean": float(stats.get("mean")) if pd.notna(stats.get("mean")) else None,
-                "median": float(stats.get("50%")) if pd.notna(stats.get("50%")) else None,
-            })
-        elif is_datetime64_any_dtype(s):
-            # For older pandas versions, describe() on datetime columns doesn't take
-            # datetime_is_numeric and returns 'first'/'last' instead of 'min'/'max'.
-            stats = s.describe()
-            col_data.update({
-                "min": str(stats.get("first")) if pd.notna(stats.get("first")) else None,
-                "max": str(stats.get("last")) if pd.notna(stats.get("last")) else None,
-            })
-
-        # Ensure values are JSON serializable (no NaN, NaT)
-        for key, value in col_data.items():
-            if pd.isna(value):
-                col_data[key] = None
-
-        columns_data.append(col_data)
-
-    return {
-        "file_hash": file_hash,
-        "n_rows": int(df.shape[0]),
-        "n_cols": int(df.shape[1]),
-        "n_duplicates": int(df.duplicated().sum()),
-        "total_missing": int(df.isnull().sum().sum()),
-        "columns": columns_data,
-        "memory_usage": int(df.memory_usage(deep=True).sum()),
     }
 
 # --- On-Demand Analysis Endpoints ---
@@ -454,18 +458,39 @@ def _load_df_from_upload(job_id: str) -> pd.DataFrame:
     return _load_df_from_bytes(Path(job.file_path).read_bytes(), job.filename)
 
 def compute_overview_for_job(job_id: str) -> Dict[str, Any]:
-    df = _load_df_from_upload(job_id)
-    filters = compute_filters_for_job(job_id)
-    df_filtered = _get_filtered_df(df, filters)
     job = get_job(job_id)
-    return compute_overview(df_filtered, job.file_hash if job else "")
+    if not job:
+        raise FileNotFoundError(f"Job with id {job_id} not found.")
+    
+    cached_results = load_cache(job.file_hash)
+    if not cached_results or "overview" not in cached_results:
+        # This case should ideally not be hit if the job status is 'finished'
+        logger.warning(f"Cache miss or invalid cache for finished job_id={job_id}")
+        # As a fallback, we could re-run analysis, but for now, we'll signal an issue.
+        raise FileNotFoundError(f"Analysis results for job {job_id} are not available.")
+
+    logger.info(f"Successfully loaded overview from cache for job_id={job_id}")
+    return cached_results["overview"]
 
 def column_detail(job_id: str, column: str, page: int = 1, page_size: int = 20) -> Dict[str, Any]:
     df = _load_df_from_upload(job_id)
     if column not in df.columns:
         raise KeyError(f"Column '{column}' not found in dataset.")
+
     s = df[column]
     res = {"name": column, "dtype": str(s.dtype), "null_pct": float(s.isna().mean())}
+
+    # Handle high-cardinality columns by offering a download instead of crashing
+    high_cardinality_cols = ["OrderCode", "ProductCode", "Quantity"]
+    if column in high_cardinality_cols:
+        res.update({
+            "type": "categorical",
+            "n_unique": -1, # Sentinel value to indicate high cardinality
+            "warning": f"Cột '{column}' có quá nhiều giá trị duy nhất để hiển thị trực tiếp. Vui lòng tải file CSV để xem chi tiết.",
+            "value_counts": {},
+            "is_high_cardinality": True # Flag for the frontend
+        })
+        return res
 
     if is_numeric_dtype(s):
         desc = s.describe()
@@ -476,77 +501,26 @@ def column_detail(job_id: str, column: str, page: int = 1, page_size: int = 20) 
             "stats": {k: float(v) if pd.notna(v) else None for k, v in desc.to_dict().items()},
             "histogram": {"counts": counts.tolist(), "bin_edges": bin_edges.tolist()}
         })
-        # Also provide value counts for numeric types to allow categorical-style display
-        counts = s.value_counts()
-        total_counts = len(counts)
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        paginated_counts = counts.iloc[start_index:end_index]
-
-        res.update({
-            "n_unique": int(s.nunique()),
-            "value_counts": {str(k): int(v) for k, v in paginated_counts.to_dict().items()},
-            "pagination": {
-                "page": page,
-                "page_size": page_size,
-                "total_items": total_counts,
-                "total_pages": (total_counts + page_size - 1) // page_size if page_size > 0 else 0
-            }
-        })
-        # Also provide value counts for numeric types to allow categorical-style display
-        counts = s.value_counts()
-        total_counts = len(counts)
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        paginated_counts = counts.iloc[start_index:end_index]
-
-        res.update({
-            "n_unique": int(s.nunique()),
-            "value_counts": {str(k): int(v) for k, v in paginated_counts.to_dict().items()},
-            "pagination": {
-                "page": page,
-                "page_size": page_size,
-                "total_items": total_counts,
-                "total_pages": (total_counts + page_size - 1) // page_size if page_size > 0 else 0
-            }
-        })
     elif is_datetime64_any_dtype(s):
-        # For datetime columns, describe() can produce NaT which is not JSON serializable.
-        # We convert all values to string representations safely.
-        desc = s.describe()
+        desc = s.describe(datetime_is_numeric=True)
         stats_dict = desc.to_dict()
         serializable_stats = {}
         for k, v in stats_dict.items():
             if pd.isna(v):
                 serializable_stats[k] = None
             else:
-                # Convert Timestamps and other objects to ISO format string
                 serializable_stats[k] = str(v)
         res.update({"type": "datetime", "stats": serializable_stats})
-    else:
-        n_unique = s.nunique()
-        res.update({"type": "categorical", "n_unique": int(n_unique)})
-        
-        if n_unique > 50000:
-            res["warning"] = f"Cột '{column}' có quá nhiều giá trị ({n_unique}) để hiển thị chi tiết. Chỉ hiển thị thông tin tóm tắt."
-            return res
-
-        # If 'Quantity' column exists and is numeric, group by the selected column and sum 'Quantity'.
-        # Otherwise, fall back to counting frequencies.
-        if 'Quantity' in df.columns and is_numeric_dtype(df['Quantity']):
-            logger.info(f"Calculating sum of 'Quantity' for categorical column '{column}'")
-            counts = df.groupby(column)['Quantity'].sum().sort_values(ascending=False)
-        else:
-            logger.info(f"'Quantity' column not found or not numeric. Falling back to value_counts for '{column}'.")
-            counts = s.value_counts()
+    else: # Categorical or Object
+        res.update({"type": "categorical"})
+        counts = s.value_counts()
         total_counts = len(counts)
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
         paginated_counts = counts.iloc[start_index:end_index]
 
         res.update({
-            "type": "categorical",
-            "n_unique": int(s.nunique()),
+            "n_unique": total_counts,
             "value_counts": {str(k): int(v) for k, v in paginated_counts.to_dict().items()},
             "pagination": {
                 "page": page,
@@ -556,3 +530,26 @@ def column_detail(job_id: str, column: str, page: int = 1, page_size: int = 20) 
             }
         })
     return res
+
+def export_column_detail_csv(job_id: str, column: str):
+    import io
+
+    df = _load_df_from_upload(job_id)
+    if column not in df.columns:
+        raise KeyError(f"Column '{column}' not found in dataset.")
+
+    s = df[column]
+    
+    # If 'Quantity' column exists and is numeric, group by the selected column and sum 'Quantity'.
+    # Otherwise, fall back to counting frequencies.
+    if column in ['OrderCode', 'ProductCode'] and 'Quantity' in df.columns and is_numeric_dtype(df['Quantity']):
+        logger.info(f"Calculating sum of 'Quantity' for categorical column '{column}' for CSV export")
+        counts = df.groupby(column)['Quantity'].sum().sort_values(ascending=False)
+    else:
+        logger.info(f"Falling back to value_counts for '{column}' for CSV export.")
+        counts = s.value_counts()
+
+    output = io.StringIO()
+    counts.to_csv(output, header=True, index_label='Value')
+    output.seek(0)
+    return io.BytesIO(output.read().encode('utf-8'))
