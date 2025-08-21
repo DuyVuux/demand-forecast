@@ -1,65 +1,92 @@
 import { createTheme } from '@mui/material/styles';
 
+// Light Theme Definition
 const theme = createTheme({
   palette: {
-    mode: 'dark', // Sử dụng theme tối để dễ dàng có nền navy
+    mode: 'light',
     primary: {
-      main: '#58A6FF', // Một màu xanh dương sáng cho các element chính
+      main: '#001f3f', // Navy blue for main actions and links
     },
     background: {
-      default: '#0D1117', // Màu nền xanh navy đậm
-      paper: '#161B22',   // Màu nền cho các component như Card, Paper
+      default: '#ffffff', // Main background: white
+      paper: '#ffffff',   // Card, table, chart background: white
     },
     text: {
-      primary: '#C9D1D9', // Màu chữ chính (trắng ngà)
-      secondary: '#8B949E', // Màu chữ phụ
+      primary: '#212121', // Primary text: almost black for readability
+      secondary: '#757575', // Secondary text: dark grey
     },
   },
   typography: {
     fontFamily: 'Arial, Helvetica, sans-serif',
-    h1: { fontSize: '2.5rem', fontWeight: 600 },
-    h2: { fontSize: '2rem', fontWeight: 600 },
-    h3: { fontSize: '1.75rem', fontWeight: 600 },
-    h4: { fontSize: '1.5rem', fontWeight: 500 },
-    body1: { fontSize: '1rem' },
+    fontSize: 14,
+    h1: { fontSize: '2.2rem', fontWeight: 600 },
+    h2: { fontSize: '1.8rem', fontWeight: 600 },
+    h3: { fontSize: '1.5rem', fontWeight: 600 },
+    h4: { fontSize: '1.2rem', fontWeight: 500 },
+    body1: { fontSize: '1rem' }, // 16px
     button: {
-      textTransform: 'none', // Giữ nguyên case của chữ trong button
+      textTransform: 'none',
       fontWeight: 600,
     },
   },
-  spacing: 8, // Hệ số spacing cơ bản là 8px
+  spacing: 8, // Base spacing unit: 8px
   components: {
+    // Button Overrides
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8, // Bo góc button
-          transition: 'background-color 0.3s ease, transform 0.2s ease',
+          borderRadius: 8,
+          padding: '8px 16px',
+          transition: 'background-color 0.2s ease-in-out, transform 0.2s ease-in-out',
           '&:hover': {
-            transform: 'translateY(-2px)',
+            transform: 'translateY(-1px)',
+            boxShadow: '0 4px 12px rgba(0, 31, 63, 0.2)',
           },
         },
       },
     },
+    // Card and Paper Overrides
     MuiPaper: {
       styleOverrides: {
         root: {
+          border: '1px solid #e0e0e0', // Light grey border
           borderRadius: 12,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
           transition: 'box-shadow 0.3s ease',
-          '&:hover': {
-            boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.2)',
-          }
         }
       }
     },
+    // Link Overrides
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          color: '#001f3f', // Navy blue
+          transition: 'color 0.2s ease-in-out',
+          '&:hover': {
+            textDecoration: 'underline',
+            color: '#004080', // Slightly lighter navy on hover
+          },
+        },
+      },
+    },
+    // Table Overrides
+    MuiTableCell: {
+        styleOverrides: {
+            root: {
+                borderBottom: '1px solid #e0e0e0', // Consistent border for table cells
+            }
+        }
+    },
+    // Tooltip Overrides
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          backgroundColor: '#22272E',
-          color: '#C9D1D9',
-          border: '1px solid #30363D',
+          backgroundColor: '#001f3f', // Navy background
+          color: '#ffffff',
+          border: '1px solid #001f3f',
         },
         arrow: {
-          color: '#22272E',
+          color: '#001f3f',
         }
       }
     }
